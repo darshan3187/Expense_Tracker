@@ -1,6 +1,6 @@
 # Expense Tracker
 
-A modern web application for tracking personal expenses, built using React for frontend and Python backend, with Appwrite for authentication and storage.
+A modern web application for tracking personal expenses, built using React and Appwrite for authentication and storage.
 
 
 ## Features
