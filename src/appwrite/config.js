@@ -16,7 +16,7 @@ export class Service {
 
     
 
-    async addExpense({ Category , slug , amount , transferDate , status, userid }){
+    async addExpense({ Category, slug, Description , amount, recipt , transferDate , userid }){
         try {
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
@@ -24,9 +24,10 @@ export class Service {
                 slug,
                 {
                     Category,
+                    Description,
                     amount,
                     transferDate,
-                    status,
+                    recipt,
                     userid
                 }
             )
@@ -35,7 +36,7 @@ export class Service {
         }
     }
 
-    async updateExpense(slug, { Category , amount , transferDate , status}){
+    async updateExpense(slug, { Category , amount , transferDate }){
         try {
             return await this.databases.updateDocument(
                 conf.appwriteDatabaseId,
@@ -45,7 +46,7 @@ export class Service {
                     Category,
                     amount,
                     transferDate,
-                    status
+                    
                 }
             )
         } catch (error) {
