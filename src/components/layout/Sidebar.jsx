@@ -17,11 +17,8 @@ export function Sidebar({ className }) {
     };
 
     const navItems = [
-        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
         { name: 'Expenses', href: '/expenses', icon: Wallet },
         { name: 'Analytics', href: '/analytics', icon: PieChart },
-        { name: 'Cards', href: '/cards', icon: CreditCard },
-        { name: 'Settings', href: '/settings', icon: Settings },
     ];
 
     return (

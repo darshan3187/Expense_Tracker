@@ -43,11 +43,8 @@ function App() {
   return (
     <Routes>
       <Route element={<DashboardLayout />}>
-        <Route path="/" element={<Navigate to="/expenses" replace />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/analytics" element={<Analytics />} />
-        <Route path="/budgets" element={<Budgets />} />
-        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   );
