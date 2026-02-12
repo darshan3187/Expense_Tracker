@@ -1,7 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-// import service from "../appwrite/config";
-import service from "../lib/mockService"; // Using Mock Service for offline capabilities
-const uniqueId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+import service from "../firebase/db";
 
 const initialState = {
     expenses: [],
@@ -12,9 +10,9 @@ const initialState = {
 // Async Thunks
 export const fetchExpenses = createAsyncThunk(
     "expenses/fetchExpenses",
-    async (_, { rejectWithValue }) => {
+    async (userId, { rejectWithValue }) => {
         try {
-            const response = await service.getExpenses();
+            const response = await service.getExpenses(userId);
             if (response && response.documents) {
                 return response.documents;
             }
@@ -29,11 +27,7 @@ export const addExpense = createAsyncThunk(
     "expenses/addExpense",
     async (expenseData, { rejectWithValue }) => {
         try {
-            const slug = uniqueId();
-            const response = await service.addExpense({
-                ...expenseData,
-                slug,
-            });
+            const response = await service.addExpense(expenseData);
             if (response) {
                 return response;
             }

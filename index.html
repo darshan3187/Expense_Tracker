@@ -8,6 +8,28 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        var div = document.createElement('div');
+        div.style.color = 'red';
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.background = 'white';
+        div.style.zIndex = '9999';
+        div.innerHTML = 'Error: ' + msg + ' at ' + url + ':' + line;
+        document.body.appendChild(div);
+      };
+      window.onunhandledrejection = function(event) {
+        var div = document.createElement('div');
+        div.style.color = 'orange';
+        div.style.position = 'fixed';
+        div.style.top = '50px';
+        div.style.background = 'white';
+        div.style.zIndex = '9999';
+        div.innerHTML = 'Promise Rejection: ' + event.reason;
+        document.body.appendChild(div);
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

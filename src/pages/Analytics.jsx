@@ -1,201 +1,202 @@
-import React, { useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useMemo, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, LineChart, Line, CartesianGrid
+    PieChart, Pie, Cell, CartesianGrid, Legend
 } from 'recharts';
 import { Card } from '../components/ui/Card';
 import { formatCurrency, cn } from '../lib/utils';
-import { TrendingUp, TrendingDown, DollarSign, PieChart as PieIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
+import { fetchExpenses } from '../store/expenseSlice';
+import { fetchIncomes } from '../store/incomeSlice';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6'];
+const INCOME_COLOR = '#10b981';
+const EXPENSE_COLOR = '#ef4444';
 
 export default function Analytics() {
-    const { expenses, status } = useSelector((state) => state.expenses);
+    const dispatch = useDispatch();
+    const { expenses, status: expStatus } = useSelector((state) => state.expenses);
+    const { incomes, status: incStatus } = useSelector((state) => state.incomes);
+    const { userData } = useSelector((state) => state.auth);
 
-    const transactions = useMemo(() => {
-        return expenses?.map(doc => ({
-            id: doc.$id,
+    useEffect(() => {
+        if (userData?.$id) {
+            dispatch(fetchExpenses(userData.$id));
+            dispatch(fetchIncomes(userData.$id));
+        }
+    }, [dispatch, userData?.$id]);
+
+    const transactionData = useMemo(() => {
+        const exps = expenses?.map(doc => ({
             amount: Number(doc.amount) || 0,
             date: doc.transferDate ? new Date(doc.transferDate) : new Date(),
             category: doc.Category || 'Uncategorized',
             type: 'expense'
         })) || [];
-    }, [expenses]);
+
+        const incs = incomes?.map(doc => ({
+            amount: Number(doc.amount) || 0,
+            date: doc.transferDate ? new Date(doc.transferDate) : new Date(),
+            category: doc.Category || 'Salary',
+            type: 'income'
+        })) || [];
+
+        return [...exps, ...incs];
+    }, [expenses, incomes]);
 
     // --- Calculations ---
+    const totalExpense = useMemo(() => transactionData.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0), [transactionData]);
+    const totalIncome = useMemo(() => transactionData.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0), [transactionData]);
+    const netBalance = totalIncome - totalExpense;
 
-    const totalExpense = transactions.reduce((acc, t) => acc + t.amount, 0);
-
-    // Category Data for Pie Chart
-    const categoryData = useMemo(() => {
+    // Category Data for Pie Chart (Expenses only)
+    const expenseCategoryData = useMemo(() => {
         const map = {};
-        transactions.forEach(t => {
+        transactionData.filter(t => t.type === 'expense').forEach(t => {
             if (!map[t.category]) map[t.category] = 0;
             map[t.category] += t.amount;
         });
         return Object.keys(map).map(k => ({ name: k, value: map[k] })).sort((a, b) => b.value - a.value);
-    }, [transactions]);
+    }, [transactionData]);
 
-    // Monthly Trend Data for Bar Chart
-    const monthlyData = useMemo(() => {
+    // Monthly Comparison Data
+    const monthlyComparisonData = useMemo(() => {
         const map = {};
-        transactions.forEach(t => {
-            // Use "Mon DD" or just "Mon" depending on density. Let's do month grouping.
+        transactionData.forEach(t => {
             const month = t.date.toLocaleString('default', { month: 'short' });
-            if (!map[month]) map[month] = 0;
-            map[month] += t.amount;
+            if (!map[month]) map[month] = { name: month, Income: 0, Expense: 0 };
+            if (t.type === 'income') map[month].Income += t.amount;
+            else map[month].Expense += t.amount;
         });
-        // Sort by month index ideally, but keys are unsorted in object.
         const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return monthOrder.map(m => ({ name: m, amount: map[m] || 0 })).filter(d => d.amount > 0 || true); // keep all months? No, maybe only relevant ones. For now, keep all for structure.
-    }, [transactions]);
+        return monthOrder.map(m => map[m] || { name: m, Income: 0, Expense: 0 }).filter(d => d.Income > 0 || d.Expense > 0);
+    }, [transactionData]);
 
-    // Highest Spending Category
-    const topCategory = categoryData.length > 0 ? categoryData[0] : { name: 'N/A', value: 0 };
-
-    // Average Spending
-    const averageSpend = transactions.length > 0 ? totalExpense / transactions.length : 0;
-
-    if (status === 'loading') {
+    if (expStatus === 'loading' || incStatus === 'loading') {
         return <AnalyticsSkeleton />;
     }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-zinc-100 tracking-tight">Analytics</h1>
-                <p className="text-zinc-400 mt-1">Deep dive into your spending habits.</p>
+                <h1 className="text-3xl font-bold text-zinc-100 tracking-tight">Financial Insights</h1>
+                <p className="text-zinc-400 mt-1">Comprehensive view of your cash flow and spending.</p>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatsCard
-                    title="Total Spent"
+                    title="Total Income"
+                    amount={totalIncome}
+                    icon={ArrowUpRight}
+                    variant="emerald"
+                />
+                <StatsCard
+                    title="Total Expenses"
                     amount={totalExpense}
-                    icon={DollarSign}
-                    variant="primary"
+                    icon={ArrowDownLeft}
+                    variant="rose"
                 />
                 <StatsCard
-                    title="Top Category"
-                    value={topCategory.name}
-                    subValue={formatCurrency(topCategory.value)}
-                    icon={TrendingUp}
-                    variant="secondary"
-                />
-                <StatsCard
-                    title="Avg. Transaction"
-                    amount={averageSpend}
-                    icon={TrendingDown}
-                    variant="secondary"
-                />
-                <StatsCard
-                    title="Total Transactions"
-                    value={transactions.length}
-                    icon={PieIcon}
-                    variant="secondary"
+                    title="Net Balance"
+                    amount={netBalance}
+                    icon={Wallet}
+                    variant="indigo"
+                    isBalance
                 />
             </div>
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                {/* Spending by Category (Pie) */}
-                <Card className="p-6 border-zinc-800 bg-zinc-900/50 backdrop-blur-sm min-h-[400px]">
-                    <h3 className="text-lg font-semibold text-zinc-100 mb-6">Spending by Category</h3>
+                {/* Income vs Expense (Bar) */}
+                <Card className="p-6 border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+                    <h3 className="text-lg font-semibold text-zinc-100 mb-6">Income vs Expenses</h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={categoryData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {categoryData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#e4e4e7' }}
-                                    formatter={(value) => formatCurrency(value)}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                        {categoryData.slice(0, 6).map((cat, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                                <span className="text-zinc-400 truncate">{cat.name}</span>
-                                <span className="ml-auto font-medium text-zinc-200">{formatCurrency(cat.value)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-
-                {/* Monthly Spending Trend (Bar) */}
-                <Card className="p-6 border-zinc-800 bg-zinc-900/50 backdrop-blur-sm min-h-[400px]">
-                    <h3 className="text-lg font-semibold text-zinc-100 mb-6">Monthly Trends</h3>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={monthlyData}>
+                            <BarChart data={monthlyComparisonData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="#71717a"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="#71717a"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(value) => `₹${value / 1000}k`}
-                                />
+                                <XAxis dataKey="name" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v >= 1000 ? v / 1000 + 'k' : v}`} />
                                 <Tooltip
                                     cursor={{ fill: '#27272a', opacity: 0.4 }}
                                     contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
                                     itemStyle={{ color: '#e4e4e7' }}
-                                    formatter={(value) => [formatCurrency(value), 'Spent']}
+                                    formatter={(value) => formatCurrency(value)}
                                 />
-                                <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                <Legend verticalAlign="top" height={36} />
+                                <Bar dataKey="Income" fill={INCOME_COLOR} radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Expense" fill={EXPENSE_COLOR} radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
 
+                {/* Expense Breakdown (Pie) */}
+                <Card className="p-6 border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+                    <h3 className="text-lg font-semibold text-zinc-100 mb-6">Expense Breakdown</h3>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={expenseCategoryData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={90}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {expenseCategoryData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
+                                    formatter={(value) => formatCurrency(value)}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-xs">
+                        {expenseCategoryData.slice(0, 6).map((cat, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
+                                <span className="text-zinc-400 truncate w-20">{cat.name}</span>
+                                <span className="ml-auto font-medium text-zinc-200">{formatCurrency(cat.value)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
             </div>
         </div>
     );
 }
 
-function StatsCard({ title, amount, value, subValue, icon: Icon, variant }) {
+function StatsCard({ title, amount, icon: Icon, variant, isBalance }) {
+    const variants = {
+        emerald: "bg-emerald-500/10 text-emerald-400",
+        rose: "bg-rose-500/10 text-rose-400",
+        indigo: "bg-indigo-500/10 text-indigo-400",
+    };
+
     return (
-        <Card className="relative overflow-hidden group hover:bg-zinc-800/40 transition-all border-zinc-800 bg-zinc-900">
+        <Card className="relative overflow-hidden group hover:bg-zinc-800/40 transition-all border-zinc-800 bg-zinc-900/50">
             <div className="p-6">
                 <div className="flex items-center gap-4">
-                    <div className={cn(
-                        "rounded-xl p-3",
-                        variant === 'primary' ? "bg-indigo-500/10 text-indigo-400" : "bg-zinc-800 text-zinc-400"
-                    )}>
+                    <div className={cn("rounded-xl p-3", variants[variant] || "bg-zinc-800 text-zinc-400")}>
                         <Icon size={24} />
                     </div>
                     <div>
                         <p className="text-sm font-medium text-zinc-400">{title}</p>
-                        <h3 className="text-2xl font-bold text-zinc-100 mt-1">
-                            {value || formatCurrency(amount)}
+                        <h3 className={cn(
+                            "text-2xl font-bold mt-1",
+                            isBalance ? (amount >= 0 ? "text-emerald-400" : "text-rose-400") : "text-zinc-100"
+                        )}>
+                            {formatCurrency(amount)}
                         </h3>
-                        {subValue && <p className="text-xs text-zinc-500 mt-1">{subValue}</p>}
                     </div>
                 </div>
             </div>
@@ -207,9 +208,9 @@ function AnalyticsSkeleton() {
     return (
         <div className="space-y-8 animate-pulse">
             <div className="h-10 w-48 bg-zinc-800 rounded-md"></div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-32 bg-zinc-900 rounded-xl border border-zinc-800"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="h-28 bg-zinc-900 rounded-xl border border-zinc-800"></div>
                 ))}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

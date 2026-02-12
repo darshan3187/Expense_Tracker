@@ -14,16 +14,18 @@ export class Service {
         this.bucket = new Storage(this.client);
     }
 
+    // --- Expense Methods ---
+
     async addExpense({ Category, slug, Description, amount, recipt, transferDate, userid }) {
         try {
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                slug,
+                slug || ID.unique(),
                 {
                     Category,
                     Description,
-                    amount,
+                    amount: parseFloat(amount),
                     transferDate,
                     recipt,
                     userid
@@ -43,8 +45,8 @@ export class Service {
                 slug,
                 {
                     Category,
-                    Description, // Ensure Description is also updatable
-                    amount,
+                    Description,
+                    amount: parseFloat(amount),
                     transferDate,
                 }
             )
@@ -64,26 +66,17 @@ export class Service {
             return true
         } catch (error) {
             console.log("Appwrite serive :: deleteExpense :: error", error);
-            // Don't throw here, just return false if handled gracefully, 
-            // but for Redux thunk to know it failed:
             throw error;
         }
     }
 
-
-    async getExpenses(queries = [Query.equal("status", "active")]) {
+    async getExpenses(userId) {
         try {
-            // NOTE: The previous code had Query.equal("status", "active").
-            // If the database documents DO NOT have a 'status' field, this query will return 0 documents!
-            // I should check if 'status' field exists.
-            // Since the user didn't mention adding a 'status' field in the schema, 
-            // and the addExpense doesn't add 'status', 
-            // THIS QUERY MIGHT BE THE CAUSE OF NO DATA BEING FETCHED.
-            // I will remove the default query to fetch all documents.
+            if (!userId) return { documents: [] };
             return await this.databases.listDocuments(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                // queries, // Commented out potentially broken query
+                [Query.equal("userid", userId), Query.orderDesc("transferDate")]
             )
         } catch (error) {
             console.log("Appwrite serive :: getExpenses :: error", error);
@@ -91,7 +84,57 @@ export class Service {
         }
     }
 
-    // file upload service
+    // --- Income Methods ---
+
+    async addIncome({ Category, slug, Description, amount, transferDate, userid }) {
+        try {
+            return await this.databases.createDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteIncomeCollectionId || conf.appwriteCollectionId, // Fallback if not configured
+                slug || ID.unique(),
+                {
+                    Category,
+                    Description,
+                    amount: parseFloat(amount),
+                    transferDate,
+                    userid
+                }
+            )
+        } catch (error) {
+            console.log("Appwrite serive :: addIncome :: error", error);
+            throw error;
+        }
+    }
+
+    async getIncomes(userId) {
+        try {
+            if (!userId) return { documents: [] };
+            return await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteIncomeCollectionId || conf.appwriteCollectionId,
+                [Query.equal("userid", userId), Query.orderDesc("transferDate")]
+            )
+        } catch (error) {
+            console.log("Appwrite serive :: getIncomes :: error", error);
+            throw error;
+        }
+    }
+
+    async deleteIncome(slug) {
+        try {
+            await this.databases.deleteDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteIncomeCollectionId || conf.appwriteCollectionId,
+                slug
+            )
+            return true
+        } catch (error) {
+            console.log("Appwrite serive :: deleteIncome :: error", error);
+            throw error;
+        }
+    }
+
+    // --- Storage Service ---
 
     async uploadFile(file) {
         try {
@@ -128,10 +171,7 @@ export class Service {
             95,
         )
     }
-
-
 }
-
 
 const service = new Service()
 export default service

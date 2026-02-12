@@ -3,14 +3,16 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Expenses from './pages/Expense';
-// import authService from './appwrite/auth';
-import authService from './lib/mockService'; // Using mock login for easy access
+import Incomes from './pages/Incomes';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import AuthLayout from './components/AuthLayout';
+import authService from './firebase/auth';
 import { login, logout } from './store/authSlice';
 import { Loader2 } from 'lucide-react';
-
 import Analytics from './pages/Analytics';
+
 const Budgets = () => <div className="p-4 text-zinc-400">Budgets Page (Coming Soon)</div>;
-const Settings = () => <div className="p-4 text-zinc-400">Settings Page (Coming Soon)</div>;
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -42,10 +44,30 @@ function App() {
 
   return (
     <Routes>
-      <Route element={<DashboardLayout />}>
+      <Route path="/login" element={
+        <AuthLayout authentication={false}>
+          <Login />
+        </AuthLayout>
+      } />
+      <Route path="/signup" element={
+        <AuthLayout authentication={false}>
+          <Signup />
+        </AuthLayout>
+      } />
+
+      <Route element={
+        <AuthLayout authentication={true}>
+          <DashboardLayout />
+        </AuthLayout>
+      }>
+        <Route path="/" element={<Navigate to="/expenses" replace />} />
         <Route path="/expenses" element={<Expenses />} />
+        <Route path="/incomes" element={<Incomes />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/budgets" element={<Budgets />} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/expenses" replace />} />
     </Routes>
   );
 }
