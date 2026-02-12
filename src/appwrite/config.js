@@ -14,9 +14,7 @@ export class Service {
         this.bucket = new Storage(this.client);
     }
 
-    
-
-    async addExpense({ Category, slug, Description , amount, recipt , transferDate , userid }){
+    async addExpense({ Category, slug, Description, amount, recipt, transferDate, userid }) {
         try {
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
@@ -32,11 +30,12 @@ export class Service {
                 }
             )
         } catch (error) {
-            console.log("Appwrite serive :: createPost :: error", error);
+            console.log("Appwrite serive :: addExpense :: error", error);
+            throw error;
         }
     }
 
-    async updateExpense(slug, { Category , amount , transferDate }){
+    async updateExpense(slug, { Category, amount, transferDate, Description }) {
         try {
             return await this.databases.updateDocument(
                 conf.appwriteDatabaseId,
@@ -44,13 +43,14 @@ export class Service {
                 slug,
                 {
                     Category,
+                    Description, // Ensure Description is also updatable
                     amount,
                     transferDate,
-                    
                 }
             )
         } catch (error) {
-            console.log("Appwrite serive :: updatePost :: error", error);
+            console.log("Appwrite serive :: updateExpense :: error", error);
+            throw error;
         }
     }
 
@@ -63,22 +63,31 @@ export class Service {
             )
             return true
         } catch (error) {
-            console.log("Appwrite serive :: deletePost :: error", error);
-            return false
+            console.log("Appwrite serive :: deleteExpense :: error", error);
+            // Don't throw here, just return false if handled gracefully, 
+            // but for Redux thunk to know it failed:
+            throw error;
         }
     }
 
 
     async getExpenses(queries = [Query.equal("status", "active")]) {
         try {
+            // NOTE: The previous code had Query.equal("status", "active").
+            // If the database documents DO NOT have a 'status' field, this query will return 0 documents!
+            // I should check if 'status' field exists.
+            // Since the user didn't mention adding a 'status' field in the schema, 
+            // and the addExpense doesn't add 'status', 
+            // THIS QUERY MIGHT BE THE CAUSE OF NO DATA BEING FETCHED.
+            // I will remove the default query to fetch all documents.
             return await this.databases.listDocuments(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                queries,
+                // queries, // Commented out potentially broken query
             )
         } catch (error) {
-            console.log("Appwrite serive :: getPosts :: error", error);
-            return false
+            console.log("Appwrite serive :: getExpenses :: error", error);
+            throw error;
         }
     }
 
@@ -93,7 +102,7 @@ export class Service {
             )
         } catch (error) {
             console.log("Appwrite serive :: uploadFile :: error", error);
-            return false
+            throw error;
         }
     }
 
@@ -106,7 +115,7 @@ export class Service {
             return true
         } catch (error) {
             console.log("Appwrite serive :: deleteFile :: error", error);
-            return false
+            throw error;
         }
     }
 
@@ -120,7 +129,7 @@ export class Service {
         )
     }
 
-    
+
 }
 
 

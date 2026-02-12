@@ -1,8 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-body {
-    padding: 0;
-    margin: 0;
-    background-color: #000;
+@theme {
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* Modern Dark Palette */
+  --color-background: #09090b;       /* Zinc 950 */
+  --color-surface: #18181b;          /* Zinc 900 */
+  --color-surface-hover: #27272a;    /* Zinc 800 */
+  
+  --color-primary: #6366f1;          /* Indigo 500 */
+  --color-primary-hover: #4f46e5;    /* Indigo 600 */
+  --color-primary-foreground: #ffffff;
+  
+  --color-secondary: #27272a;        /* Zinc 800 */
+  --color-secondary-hover: #3f3f46;  /* Zinc 700 */
+  --color-secondary-foreground: #fafafa; /* Zinc 50 */
+  
+  --color-destructive: #ef4444;      /* Red 500 */
+  --color-destructive-foreground: #ffffff;
+  
+  --color-border: #27272a;           /* Zinc 800 */
+  --color-input: #27272a;            /* Zinc 800 */
+  --color-ring: #6366f1;             /* Indigo 500 */
+  
+  --color-text-main: #f4f4f5;        /* Zinc 100 */
+  --color-text-muted: #a1a1aa;       /* Zinc 400 */
 }
 
+body {
+  @apply bg-background text-text-main antialiased font-sans;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors;
+}
+
+/* Glassmorphism Classes */
+.glass {
+  @apply bg-surface/80 backdrop-blur-md border border-white/5;
+}
+
+.glass-card {
+  @apply bg-surface/50 backdrop-blur-sm border border-border shadow-sm;
+}
