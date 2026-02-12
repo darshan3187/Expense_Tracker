@@ -10,11 +10,6 @@ export function Sidebar({ className }) {
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const handleLogout = async () => {
-        await authService.logout();
-        dispatch(logout());
-        navigate('/login');
-    };
 
     const navItems = [
         { name: 'Expenses', href: '/expenses', icon: Wallet },
@@ -48,16 +43,6 @@ export function Sidebar({ className }) {
                         {item.name}
                     </NavLink>
                 ))}
-            </div>
-
-            <div className="absolute bottom-4 left-0 right-0 px-4">
-                <button
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                    <LogOut size={18} />
-                    Sign Out
-                </button>
             </div>
         </aside>
     );
